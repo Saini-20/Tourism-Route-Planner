@@ -1,548 +1,1072 @@
-// Tamil Nadu cities data with positions and connections
+// ============================================
+// TAMIL NADU TOURISM ROUTE PLANNER
+// Leaflet Map + DFS + Prim's MST + Dijkstra
+// ============================================
+
+
+// -----------------------------
+// CITY DATA
+// -----------------------------
+
 const cities = {
-  Chennai: {
-    x: 80,
-    y: 50,
-    connections: { Vellore: 150, Kanchipuram: 70, Tiruvallur: 40 },
-  },
-  Coimbatore: {
-    x: 40,
-    y: 80,
-    connections: { Tiruppur: 50, Erode: 90, Nilgiris: 120 },
-  },
-  Madurai: {
-    x: 60,
-    y: 85,
-    connections: { Dindigul: 60, Theni: 70, Sivaganga: 80 },
-  },
-  Trichy: {
-    x: 70,
-    y: 70,
-    connections: { Pudukkottai: 50, Karur: 70, Perambalur: 60 },
-  },
-  Salem: {
-    x: 50,
-    y: 60,
-    connections: { Dharmapuri: 70, Namakkal: 40, Krishnagiri: 80 },
-  },
-  Vellore: {
-    x: 60,
-    y: 40,
-    connections: { Tiruvannamalai: 70, Kanchipuram: 80 },
-  },
-  Kanchipuram: { x: 70, y: 45, connections: { Chennai: 70, Tiruvallur: 50 } },
-  Tiruvallur: { x: 75, y: 40, connections: { Chennai: 40 } },
-  Tiruppur: { x: 35, y: 75, connections: { Coimbatore: 50, Erode: 60 } },
-  Erode: {
-    x: 45,
-    y: 70,
-    connections: { Coimbatore: 90, Tiruppur: 60, Salem: 80 },
-  },
-  Nilgiris: { x: 30, y: 90, connections: { Coimbatore: 120 } },
-  Dindigul: { x: 55, y: 80, connections: { Madurai: 60, Karur: 90 } },
-  Theni: { x: 50, y: 90, connections: { Madurai: 70 } },
-  Sivaganga: { x: 65, y: 90, connections: { Madurai: 80 } },
-  Pudukkottai: { x: 65, y: 75, connections: { Trichy: 50 } },
-  Karur: { x: 55, y: 70, connections: { Trichy: 70, Dindigul: 90 } },
-  Perambalur: { x: 75, y: 65, connections: { Trichy: 60 } },
-  Dharmapuri: { x: 45, y: 50, connections: { Salem: 70, Krishnagiri: 60 } },
-  Namakkal: { x: 50, y: 65, connections: { Salem: 40 } },
-  Krishnagiri: { x: 55, y: 45, connections: { Salem: 80, Dharmapuri: 60 } },
-  Tiruvannamalai: { x: 65, y: 55, connections: { Vellore: 70 } },
+    Chennai: {
+        lat: 13.0827,
+        lng: 80.2707
+    },
+
+    Mahabalipuram: {
+        lat: 12.6269,
+        lng: 80.1927
+    },
+
+    Kanchipuram: {
+        lat: 12.8342,
+        lng: 79.7036
+    },
+
+    Vellore: {
+        lat: 12.9165,
+        lng: 79.1325
+    },
+
+    Yelagiri: {
+        lat: 12.5797,
+        lng: 78.6400
+    },
+
+    Salem: {
+        lat: 11.6643,
+        lng: 78.1460
+    },
+
+    Erode: {
+        lat: 11.3410,
+        lng: 77.7172
+    },
+
+    Coimbatore: {
+        lat: 11.0168,
+        lng: 76.9558
+    },
+
+    Ooty: {
+        lat: 11.4102,
+        lng: 76.6950
+    },
+
+    Madurai: {
+        lat: 9.9252,
+        lng: 78.1198
+    },
+
+    Rameswaram: {
+        lat: 9.2881,
+        lng: 79.3129
+    },
+
+    Kanyakumari: {
+        lat: 8.0883,
+        lng: 77.5385
+    },
+
+    Thanjavur: {
+        lat: 10.7870,
+        lng: 79.1378
+    },
+
+    Trichy: {
+        lat: 10.7905,
+        lng: 78.7047
+    },
+
+    Pondicherry: {
+        lat: 11.9416,
+        lng: 79.8083
+    }
 };
 
-// Global variables
-let selectedAlgorithm = null;
+
+// -----------------------------
+// GRAPH EDGES
+// -----------------------------
+
+const edges = [
+    { from: "Chennai", to: "Mahabalipuram", weight: 55 },
+    { from: "Mahabalipuram", to: "Kanchipuram", weight: 65 },
+    { from: "Kanchipuram", to: "Vellore", weight: 80 },
+    { from: "Vellore", to: "Yelagiri", weight: 45 },
+    { from: "Yelagiri", to: "Salem", weight: 110 },
+    { from: "Salem", to: "Erode", weight: 70 },
+    { from: "Erode", to: "Coimbatore", weight: 100 },
+    { from: "Coimbatore", to: "Ooty", weight: 85 },
+    { from: "Salem", to: "Trichy", weight: 160 },
+    { from: "Trichy", to: "Thanjavur", weight: 55 },
+    { from: "Thanjavur", to: "Madurai", weight: 190 },
+    { from: "Madurai", to: "Rameswaram", weight: 170 },
+    { from: "Rameswaram", to: "Kanyakumari", weight: 310 },
+    { from: "Pondicherry", to: "Mahabalipuram", weight: 95 },
+    { from: "Pondicherry", to: "Chennai", weight: 160 },
+    { from: "Chennai", to: "Kanchipuram", weight: 75 },
+    { from: "Trichy", to: "Madurai", weight: 140 },
+    { from: "Erode", to: "Trichy", weight: 120 }
+];
+
+
+// -----------------------------
+// GLOBAL VARIABLES
+// -----------------------------
+
+let map;
+
+let currentAlgorithm = "dfs";
+
+let animationSteps = [];
 let currentStep = 0;
-let algorithmSteps = [];
-let visitedNodes = new Set();
-let currentPath = [];
-let mstEdges = [];
-let shortestPath = [];
+let isAnimating = false;
 
-// Initialize the visualization
-function initializeVisualization() {
-  const container = document.getElementById("map-container");
-  container.innerHTML = "";
+let cityMarkers = {};
+let edgeLines = {};
 
-  // Draw connections first (so they appear behind nodes)
-  for (const city in cities) {
-    for (const connectedCity in cities[city].connections) {
-      // Only draw each connection once
-      if (city < connectedCity) {
-        drawConnection(city, connectedCity);
-      }
-    }
-  }
 
-  // Draw cities
-  for (const city in cities) {
-    drawCity(city);
-  }
+// -----------------------------
+// INITIALIZE MAP
+// -----------------------------
 
-  // Reset algorithm state
-  resetAlgorithmState();
+function initializeMap() {
+
+    map = L.map("map-container").setView(
+        [11.1271, 78.6569],
+        7
+    );
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            attribution:
+                '&copy; OpenStreetMap contributors'
+        }
+    ).addTo(map);
+
+    drawAllEdges();
+    drawAllCities();
+
+    populateDropdowns();
+    updateStats();
 }
 
-// Draw a city node
-function drawCity(city) {
-  const container = document.getElementById("map-container");
-  const cityData = cities[city];
 
-  const node = document.createElement("div");
-  node.className = "city-node";
-  node.id = `node-${city}`;
-  node.style.left = `calc(${cityData.x}% - 20px)`;
-  node.style.top = `calc(${cityData.y}% - 20px)`;
-  node.textContent = city.substring(0, 3);
-  node.title = city;
+// -----------------------------
+// DRAW CITIES
+// -----------------------------
 
-  // Add city label
-  const label = document.createElement("div");
-  label.className = "city-label";
-  label.textContent = city;
-  label.style.left = `calc(${cityData.x}% + 25px)`;
-  label.style.top = `calc(${cityData.y}% - 10px)`;
+function drawAllCities() {
 
-  container.appendChild(node);
-  container.appendChild(label);
-}
+    Object.keys(cities).forEach((city) => {
 
-// Draw a connection between two cities
-function drawConnection(city1, city2) {
-  const container = document.getElementById("map-container");
-  const city1Data = cities[city1];
-  const city2Data = cities[city2];
+        const location = cities[city];
 
-  // Calculate distance and angle
-  const dx = city2Data.x - city1Data.x;
-  const dy = city2Data.y - city1Data.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
+        const marker = L.circleMarker(
+            [location.lat, location.lng],
+            {
+                radius: 8,
+                color: "#ffffff",
+                weight: 2,
+                fillColor: "#3498db",
+                fillOpacity: 1
+            }
+        ).addTo(map);
 
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+        marker.bindPopup(`
+            <b>${city}</b><br>
+            Tourist City
+        `);
 
-  const connection = document.createElement("div");
-  connection.className = "city-connection";
-  connection.id = `conn-${city1}-${city2}`;
-  connection.style.left = `calc(${city1Data.x}% - 1.5px)`;
-  connection.style.top = `calc(${city1Data.y}% - 1.5px)`;
-  connection.style.width = `${distance}%`;
-  connection.style.transform = `rotate(${angle}deg)`;
-
-  container.appendChild(connection);
-}
-
-// Select an algorithm
-function selectAlgorithm(algorithm) {
-  selectedAlgorithm = algorithm;
-
-  // Update UI
-  document.querySelectorAll(".algorithm-card").forEach((card) => {
-    card.classList.remove("selected");
-  });
-  document.getElementById(`${algorithm}-card`).classList.add("selected");
-
-  // Update visualization title
-  document.getElementById("viz-title").textContent = `${getAlgorithmFullName(
-    algorithm
-  )} Visualization`;
-
-  // Show/hide city selector based on algorithm
-  const citySelector = document.getElementById("city-selector");
-  if (algorithm === "dijkstra") {
-    citySelector.style.display = "flex";
-  } else {
-    citySelector.style.display = "none";
-  }
-
-  // Reset visualization
-  resetVisualization();
-
-  // Update results placeholder
-  document.getElementById(
-    "results-content"
-  ).textContent = `${getAlgorithmFullName(
-    algorithm
-  )} selected. Click "Run Algorithm" to see results.`;
-}
-
-// Get full algorithm name
-function getAlgorithmFullName(algorithm) {
-  switch (algorithm) {
-    case "dfs":
-      return "DFS Traversal";
-    case "prims":
-      return "Prim's MST";
-    case "dijkstra":
-      return "Dijkstra's Path";
-    default:
-      return "Algorithm";
-  }
-}
-
-// Run the selected algorithm
-function runAlgorithm() {
-  if (!selectedAlgorithm) {
-    alert("Please select an algorithm first.");
-    return;
-  }
-
-  resetAlgorithmState();
-
-  switch (selectedAlgorithm) {
-    case "dfs":
-      runDFS();
-      break;
-    case "prims":
-      runPrims();
-      break;
-    case "dijkstra":
-      runDijkstra();
-      break;
-  }
-
-  // Display first step
-  displayStep(0);
-}
-
-// Step through the algorithm
-function stepAlgorithm() {
-  if (algorithmSteps.length === 0) {
-    alert("Please run an algorithm first.");
-    return;
-  }
-
-  currentStep = (currentStep + 1) % algorithmSteps.length;
-  displayStep(currentStep);
-}
-
-// Display a specific step of the algorithm
-function displayStep(stepIndex) {
-  if (stepIndex < 0 || stepIndex >= algorithmSteps.length) return;
-
-  currentStep = stepIndex;
-  const step = algorithmSteps[stepIndex];
-
-  // Update visualization based on step
-  highlightNodes(step.visited || []);
-  if (step.path) highlightPath(step.path);
-  if (step.mst) highlightMST(step.mst);
-
-  // Update steps display
-  const stepsContainer = document.getElementById("algorithm-steps");
-  stepsContainer.innerHTML = "";
-
-  algorithmSteps.forEach((s, i) => {
-    const stepElement = document.createElement("div");
-    stepElement.className = `step ${i === stepIndex ? "current-step" : ""}`;
-    stepElement.textContent = `${i + 1}. ${s.description}`;
-    stepsContainer.appendChild(stepElement);
-  });
-
-  // Update results
-  if (step.result) {
-    document.getElementById("results-content").textContent = step.result;
-  }
-
-  // Auto-scroll to current step
-  stepsContainer.scrollTop = stepsContainer.scrollHeight;
-}
-
-// Highlight visited nodes
-function highlightNodes(nodes) {
-  // Reset all nodes
-  document.querySelectorAll(".city-node").forEach((node) => {
-    node.style.background = "#1a237e";
-  });
-
-  // Highlight visited nodes
-  nodes.forEach((node) => {
-    const nodeElement = document.getElementById(`node-${node}`);
-    if (nodeElement) {
-      nodeElement.style.background = "#4caf50";
-    }
-  });
-}
-
-// Highlight a path
-function highlightPath(path) {
-  // Reset all connections
-  document.querySelectorAll(".city-connection").forEach((conn) => {
-    conn.style.background = "#5c6bc0";
-    conn.style.height = "3px";
-  });
-
-  // Highlight path connections
-  for (let i = 0; i < path.length - 1; i++) {
-    const conn1 = document.getElementById(`conn-${path[i]}-${path[i + 1]}`);
-    const conn2 = document.getElementById(`conn-${path[i + 1]}-${path[i]}`);
-
-    if (conn1) {
-      conn1.style.background = "#ff9800";
-      conn1.style.height = "5px";
-    }
-    if (conn2) {
-      conn2.style.background = "#ff9800";
-      conn2.style.height = "5px";
-    }
-  }
-}
-
-// Highlight MST edges
-function highlightMST(mstEdges) {
-  // Reset all connections
-  document.querySelectorAll(".city-connection").forEach((conn) => {
-    conn.style.background = "#5c6bc0";
-    conn.style.height = "3px";
-  });
-
-  // Highlight MST edges
-  mstEdges.forEach((edge) => {
-    const conn = document.getElementById(`conn-${edge[0]}-${edge[1]}`);
-    if (conn) {
-      conn.style.background = "#4caf50";
-      conn.style.height = "5px";
-    }
-  });
-}
-
-// Reset visualization
-function resetVisualization() {
-  initializeVisualization();
-  resetAlgorithmState();
-  document.getElementById("results-content").textContent = selectedAlgorithm
-    ? `${getAlgorithmFullName(
-        selectedAlgorithm
-      )} selected. Click "Run Algorithm" to see results.`
-    : "Select an algorithm and run it to see results here.";
-}
-
-// Reset algorithm state
-function resetAlgorithmState() {
-  currentStep = 0;
-  algorithmSteps = [];
-  visitedNodes.clear();
-  currentPath = [];
-  mstEdges = [];
-  shortestPath = [];
-
-  const stepsContainer = document.getElementById("algorithm-steps");
-  stepsContainer.innerHTML = "";
-
-  // Reset all visual elements
-  document.querySelectorAll(".city-node").forEach((node) => {
-    node.style.background = "#1a237e";
-  });
-
-  document.querySelectorAll(".city-connection").forEach((conn) => {
-    conn.style.background = "#5c6bc0";
-    conn.style.height = "3px";
-  });
-}
-
-// DFS Algorithm
-function runDFS() {
-  const startCity = "Chennai"; // Default start city
-  algorithmSteps = [];
-  visitedNodes.clear();
-
-  algorithmSteps.push({
-    description: `Starting DFS from ${startCity}`,
-    visited: [startCity],
-  });
-
-  const stack = [startCity];
-  visitedNodes.add(startCity);
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-
-    algorithmSteps.push({
-      description: `Visiting ${current}`,
-      visited: Array.from(visitedNodes),
-      path: [current],
-    });
-
-    for (const neighbor in cities[current].connections) {
-      if (!visitedNodes.has(neighbor)) {
-        visitedNodes.add(neighbor);
-        stack.push(neighbor);
-
-        algorithmSteps.push({
-          description: `Moving from ${current} to ${neighbor}`,
-          visited: Array.from(visitedNodes),
-          path: [current, neighbor],
+        marker.bindTooltip(city, {
+            permanent: true,
+            direction: "top",
+            offset: [0, -8]
         });
-      }
-    }
-  }
 
-  algorithmSteps.push({
-    description: "DFS traversal complete",
-    visited: Array.from(visitedNodes),
-    result: `DFS visited ${visitedNodes.size} cities: ${Array.from(
-      visitedNodes
-    ).join(", ")}`,
-  });
+        cityMarkers[city] = marker;
+
+    });
 }
 
-// Prim's MST Algorithm
-function runPrims() {
-  algorithmSteps = [];
-  mstEdges = [];
-  visitedNodes.clear();
-  const inMST = new Set();
 
-  // Start with first city
-  const startCity = Object.keys(cities)[0];
-  inMST.add(startCity);
+// -----------------------------
+// DRAW ALL EDGES
+// -----------------------------
 
-  algorithmSteps.push({
-    description: `Starting Prim's MST from ${startCity}`,
-    mst: [...mstEdges],
-    visited: Array.from(inMST),
-  });
+function drawAllEdges() {
 
-  while (inMST.size < Object.keys(cities).length) {
-    let minEdge = null;
-    let minWeight = Infinity;
+    edges.forEach((edge) => {
 
-    // Find minimum weight edge connecting MST to non-MST vertex
-    for (const city of inMST) {
-      for (const neighbor in cities[city].connections) {
-        if (!inMST.has(neighbor)) {
-          const weight = cities[city].connections[neighbor];
-          if (weight < minWeight) {
-            minWeight = weight;
-            minEdge = [city, neighbor];
-          }
-        }
-      }
-    }
+        const from = cities[edge.from];
+        const to = cities[edge.to];
 
-    if (minEdge) {
-      mstEdges.push(minEdge);
-      inMST.add(minEdge[1]);
+        const line = L.polyline(
+            [
+                [from.lat, from.lng],
+                [to.lat, to.lng]
+            ],
+            {
+                color: "#95a5a6",
+                weight: 3,
+                opacity: 0.7
+            }
+        ).addTo(map);
 
-      algorithmSteps.push({
-        description: `Adding edge ${minEdge[0]} - ${minEdge[1]} (weight: ${minWeight}) to MST`,
-        mst: [...mstEdges],
-        visited: Array.from(inMST),
-      });
+        line.bindTooltip(
+            `${edge.from} ↔ ${edge.to} (${edge.weight} km)`
+        );
+
+        edgeLines[getEdgeKey(edge.from, edge.to)] = line;
+
+    });
+}
+
+
+// -----------------------------
+// EDGE KEY
+// -----------------------------
+
+function getEdgeKey(city1, city2) {
+
+    return [city1, city2]
+        .sort()
+        .join("--");
+
+}
+
+
+// -----------------------------
+// POPULATE DROPDOWNS
+// -----------------------------
+
+function populateDropdowns() {
+
+    const startSelect = document.getElementById("start-city");
+    const endSelect = document.getElementById("end-city");
+
+    startSelect.innerHTML = "";
+    endSelect.innerHTML = "";
+
+    Object.keys(cities).forEach((city) => {
+
+        const option1 = document.createElement("option");
+        option1.value = city;
+        option1.textContent = city;
+
+        const option2 = document.createElement("option");
+        option2.value = city;
+        option2.textContent = city;
+
+        startSelect.appendChild(option1);
+        endSelect.appendChild(option2);
+
+    });
+
+    startSelect.value = "Chennai";
+    endSelect.value = "Kanyakumari";
+
+}
+
+
+// -----------------------------
+// UPDATE STATISTICS
+// -----------------------------
+
+function updateStats() {
+
+    document.getElementById("nodes-count").textContent =
+        Object.keys(cities).length;
+
+    document.getElementById("edges-count").textContent =
+        edges.length;
+
+    document.getElementById("visited-count").textContent =
+        0;
+
+    document.getElementById("current-step").textContent =
+        currentStep;
+
+}
+
+
+// -----------------------------
+// SELECT ALGORITHM
+// -----------------------------
+
+function selectAlgorithm(event, algorithm) {
+
+    currentAlgorithm = algorithm;
+
+    document.querySelectorAll(".algorithm-btn").forEach((button) => {
+        button.classList.remove("active");
+    });
+
+    event.currentTarget.classList.add("active");
+
+    const description =
+        document.getElementById("algorithm-description");
+
+    if (algorithm === "dfs") {
+
+        description.textContent =
+            "DFS explores all connected nodes from a starting point using a stack-based approach. Time Complexity: O(V + E)";
+
+    } else if (algorithm === "prims") {
+
+        description.textContent =
+            "Prim's algorithm finds a minimum spanning tree for a weighted undirected graph. Time Complexity: O(E log V)";
+
     } else {
-      break; // No more edges to add
+
+        description.textContent =
+            "Dijkstra's algorithm finds the shortest path between nodes in a weighted graph. Time Complexity: O((V + E) log V)";
+
     }
-  }
 
-  // Calculate total weight
-  let totalWeight = 0;
-  mstEdges.forEach((edge) => {
-    totalWeight += cities[edge[0]].connections[edge[1]];
-  });
+    resetGraph();
 
-  algorithmSteps.push({
-    description: "Prim's MST complete",
-    mst: [...mstEdges],
-    result: `MST has ${mstEdges.length} edges with total weight ${totalWeight}`,
-  });
 }
 
-// Dijkstra's Algorithm
-function runDijkstra() {
-  const startCity = document.getElementById("start-city").value;
-  const endCity = document.getElementById("end-city").value;
 
-  if (startCity === endCity) {
-    alert("Please select different start and end cities.");
-    return;
-  }
+// -----------------------------
+// RUN SELECTED ALGORITHM
+// -----------------------------
 
-  algorithmSteps = [];
-  visitedNodes.clear();
-  const distances = {};
-  const previous = {};
-  const unvisited = new Set(Object.keys(cities));
+function runAlgorithm() {
 
-  // Initialize distances
-  for (const city in cities) {
-    distances[city] = city === startCity ? 0 : Infinity;
-    previous[city] = null;
-  }
+    if (isAnimating) return;
 
-  algorithmSteps.push({
-    description: `Starting Dijkstra from ${startCity} to ${endCity}`,
-    visited: [startCity],
-    result: `Finding shortest path from ${startCity} to ${endCity}`,
-  });
+    resetGraph();
 
-  while (unvisited.size > 0) {
-    // Find unvisited node with smallest distance
-    let current = null;
-    for (const city of unvisited) {
-      if (current === null || distances[city] < distances[current]) {
-        current = city;
-      }
+    const startCity =
+        document.getElementById("start-city").value;
+
+    const endCity =
+        document.getElementById("end-city").value;
+
+    if (
+        startCity === endCity &&
+        currentAlgorithm !== "prims"
+    ) {
+        alert("Please select different start and end cities!");
+        return;
     }
 
-    if (current === null || distances[current] === Infinity) break;
+    isAnimating = true;
 
-    unvisited.delete(current);
-    visitedNodes.add(current);
+    if (currentAlgorithm === "dfs") {
 
-    algorithmSteps.push({
-      description: `Visiting ${current} (distance: ${distances[current]})`,
-      visited: Array.from(visitedNodes),
-      path: [current],
+        runDFS(startCity, endCity);
+
+    } else if (currentAlgorithm === "prims") {
+
+        runPrims(startCity);
+
+    } else {
+
+        runDijkstra(startCity, endCity);
+
+    }
+
+    currentStep = 0;
+    executeStep();
+
+}
+
+
+// ============================================
+// DFS
+// ============================================
+
+function runDFS(startCity, endCity) {
+
+    animationSteps = [];
+
+    const visited = new Set();
+
+    const stack = [
+        [startCity, [startCity]]
+    ];
+
+    let found = false;
+
+    animationSteps.push({
+        action: "start",
+        message: `🚀 Starting DFS from ${startCity} to find ${endCity}`,
+        visited: new Set(),
+        current: startCity,
+        path: [startCity]
     });
 
-    // Stop if we reached the destination
-    if (current === endCity) break;
+    while (stack.length > 0 && !found) {
 
-    // Update distances to neighbors
-    for (const neighbor in cities[current].connections) {
-      if (unvisited.has(neighbor)) {
-        const alt = distances[current] + cities[current].connections[neighbor];
-        if (alt < distances[neighbor]) {
-          distances[neighbor] = alt;
-          previous[neighbor] = current;
+        const [current, path] = stack.pop();
 
-          algorithmSteps.push({
-            description: `Updating distance to ${neighbor} to ${alt} via ${current}`,
-            visited: Array.from(visitedNodes),
-          });
+        if (!visited.has(current)) {
+
+            visited.add(current);
+
+            animationSteps.push({
+                action: "visit",
+                node: current,
+                message: `🔍 Visiting ${current} (${visited.size}/${Object.keys(cities).length} cities explored)`,
+                visited: new Set(visited),
+                current: current,
+                path: [...path]
+            });
+
+            if (current === endCity) {
+
+                found = true;
+
+                animationSteps.push({
+                    action: "found",
+                    node: current,
+                    message: `🎉 Destination ${endCity} found! Path: ${path.join(" → ")}`,
+                    visited: new Set(visited),
+                    current: current,
+                    path: [...path]
+                });
+
+                break;
+            }
+
+            const neighbors = getNeighbors(current)
+                .filter((neighbor) => !visited.has(neighbor));
+
+            for (const neighbor of neighbors.reverse()) {
+
+                const newPath = [...path, neighbor];
+
+                animationSteps.push({
+                    action: "discover",
+                    from: current,
+                    to: neighbor,
+                    message: `🔗 Discovering ${neighbor} from ${current}`,
+                    visited: new Set(visited),
+                    current: current,
+                    path: [...path]
+                });
+
+                stack.push([neighbor, newPath]);
+            }
         }
-      }
     }
-  }
 
-  // Reconstruct path
-  const path = [];
-  let current = endCity;
-  while (current !== null) {
-    path.unshift(current);
-    current = previous[current];
-  }
+    if (!found) {
 
-  // Check if path was found
-  if (path.length === 1 && path[0] === endCity && startCity !== endCity) {
-    algorithmSteps.push({
-      description: "No path found between selected cities",
-      visited: Array.from(visitedNodes),
-      result: `No path found from ${startCity} to ${endCity}`,
-    });
-  } else {
-    algorithmSteps.push({
-      description: `Shortest path found: ${path.join(" → ")}`,
-      visited: Array.from(visitedNodes),
-      path: path,
-      result: `Shortest path from ${startCity} to ${endCity}: ${path.join(
-        " → "
-      )} (Total distance: ${distances[endCity]})`,
-    });
-  }
+        animationSteps.push({
+            action: "notfound",
+            message: `❌ Path from ${startCity} to ${endCity} not found!`,
+            visited: new Set(visited),
+            path: []
+        });
+
+    }
+
 }
 
-// Initialize the page
-window.onload = function () {
-  initializeVisualization();
-};
+
+// ============================================
+// PRIM'S MST
+// ============================================
+
+function runPrims(startCity) {
+
+    animationSteps = [];
+
+    const visited = new Set([startCity]);
+    const mstEdges = [];
+    const priorityQueue = [];
+
+    getNeighbors(startCity).forEach((neighbor) => {
+
+        const edge = getEdge(startCity, neighbor);
+
+        if (edge) {
+            priorityQueue.push({
+                ...edge,
+                priority: edge.weight
+            });
+        }
+
+    });
+
+    priorityQueue.sort((a, b) => a.weight - b.weight);
+
+    animationSteps.push({
+        action: "start",
+        message: `🌳 Starting Prim's MST algorithm from ${startCity}`,
+        visited: new Set(visited),
+        current: startCity,
+        mstEdges: []
+    });
+
+    while (
+        visited.size < Object.keys(cities).length &&
+        priorityQueue.length > 0
+    ) {
+
+        const minEdge = priorityQueue.shift();
+
+        const newCity = visited.has(minEdge.from)
+            ? minEdge.to
+            : minEdge.from;
+
+        if (visited.has(newCity)) continue;
+
+        visited.add(newCity);
+        mstEdges.push(minEdge);
+
+        animationSteps.push({
+            action: "visit",
+            node: newCity,
+            message: `➕ Adding ${newCity} to MST via ${minEdge.from} ↔ ${minEdge.to} (weight: ${minEdge.weight})`,
+            visited: new Set(visited),
+            current: newCity,
+            edge: minEdge,
+            mstEdges: [...mstEdges]
+        });
+
+        getNeighbors(newCity).forEach((neighbor) => {
+
+            if (!visited.has(neighbor)) {
+
+                const edge = getEdge(newCity, neighbor);
+
+                if (edge) {
+
+                    priorityQueue.push({
+                        ...edge,
+                        priority: edge.weight
+                    });
+
+                    priorityQueue.sort(
+                        (a, b) => a.weight - b.weight
+                    );
+                }
+            }
+
+        });
+
+    }
+
+    const totalWeight = mstEdges.reduce(
+        (sum, edge) => sum + edge.weight,
+        0
+    );
+
+    animationSteps.push({
+        action: "complete",
+        message: `✅ Prim's MST completed! Total weight: ${totalWeight} km, Edges: ${mstEdges.length}`,
+        visited: new Set(visited),
+        mstEdges: [...mstEdges]
+    });
+
+}
+
+
+// ============================================
+// DIJKSTRA
+// ============================================
+
+function runDijkstra(startCity, endCity) {
+
+    animationSteps = [];
+
+    const distances = {};
+    const previous = {};
+    const visited = new Set();
+
+    const priorityQueue = [];
+
+    Object.keys(cities).forEach((city) => {
+
+        distances[city] =
+            city === startCity ? 0 : Infinity;
+
+        previous[city] = null;
+
+        priorityQueue.push({
+            city: city,
+            distance: distances[city]
+        });
+
+    });
+
+    priorityQueue.sort(
+        (a, b) => a.distance - b.distance
+    );
+
+    animationSteps.push({
+        action: "start",
+        message: `🎯 Starting Dijkstra's algorithm from ${startCity} to ${endCity}`,
+        visited: new Set(),
+        current: startCity,
+        distances: { ...distances }
+    });
+
+    while (priorityQueue.length > 0) {
+
+        const currentItem = priorityQueue.shift();
+        const current = currentItem.city;
+
+        if (visited.has(current)) continue;
+
+        if (distances[current] === Infinity) break;
+
+        visited.add(current);
+
+        animationSteps.push({
+            action: "visit",
+            node: current,
+            message: `📍 Processing ${current} with distance ${distances[current]} km`,
+            visited: new Set(visited),
+            current: current,
+            distances: { ...distances }
+        });
+
+        if (current === endCity) {
+
+            const path = [];
+
+            let pathNode = endCity;
+
+            while (pathNode !== null) {
+
+                path.unshift(pathNode);
+                pathNode = previous[pathNode];
+
+            }
+
+            animationSteps.push({
+                action: "found",
+                node: current,
+                message: `🎉 Shortest path found! Distance: ${distances[current]} km. Path: ${path.join(" → ")}`,
+                visited: new Set(visited),
+                current: current,
+                distances: { ...distances },
+                path: path
+            });
+
+            break;
+        }
+
+        const neighbors = getNeighbors(current);
+
+        for (const neighbor of neighbors) {
+
+            if (!visited.has(neighbor)) {
+
+                const edge = getEdge(current, neighbor);
+
+                if (edge) {
+
+                    const alt =
+                        distances[current] + edge.weight;
+
+                    if (alt < distances[neighbor]) {
+
+                        distances[neighbor] = alt;
+                        previous[neighbor] = current;
+
+                        const index = priorityQueue.findIndex(
+                            (item) => item.city === neighbor
+                        );
+
+                        if (index !== -1) {
+
+                            priorityQueue[index].distance = alt;
+
+                            priorityQueue.sort(
+                                (a, b) => a.distance - b.distance
+                            );
+
+                        }
+
+                        animationSteps.push({
+                            action: "discover",
+                            from: current,
+                            to: neighbor,
+                            message: `🔄 Updated distance to ${neighbor}: ${alt} km via ${current}`,
+                            visited: new Set(visited),
+                            current: current,
+                            distances: { ...distances }
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    if (distances[endCity] === Infinity) {
+
+        animationSteps.push({
+            action: "notfound",
+            message: `❌ No path found from ${startCity} to ${endCity}`,
+            visited: new Set(visited),
+            distances: { ...distances }
+        });
+
+    }
+
+}
+
+
+// ============================================
+// GRAPH HELPER FUNCTIONS
+// ============================================
+
+function getNeighbors(city) {
+
+    const neighbors = [];
+
+    edges.forEach((edge) => {
+
+        if (edge.from === city) {
+            neighbors.push(edge.to);
+        }
+
+        if (edge.to === city) {
+            neighbors.push(edge.from);
+        }
+
+    });
+
+    return neighbors;
+
+}
+
+
+function getEdge(city1, city2) {
+
+    return edges.find((edge) =>
+
+        (edge.from === city1 && edge.to === city2) ||
+        (edge.from === city2 && edge.to === city1)
+
+    );
+
+}
+
+
+// ============================================
+// VISUALIZATION
+// ============================================
+
+function executeStep() {
+
+    if (currentStep >= animationSteps.length) {
+
+        document.getElementById("step-info").textContent =
+            "🏁 Algorithm completed!";
+
+        isAnimating = false;
+        return;
+    }
+
+    const step = animationSteps[currentStep];
+
+    document.getElementById("step-info").textContent =
+        step.message;
+
+    resetGraphVisuals();
+
+    if (step.visited) {
+
+        document.getElementById("visited-count").textContent =
+            step.visited.size;
+
+        step.visited.forEach((city) => {
+
+            updateCityMarker(city, "visited");
+
+        });
+    }
+
+    if (step.current) {
+
+        updateCityMarker(step.current, "current");
+
+    }
+
+    if (step.action === "discover") {
+
+        highlightEdge(
+            step.from,
+            step.to,
+            "active"
+        );
+
+    }
+
+    if (step.path && step.action === "found") {
+
+        highlightPath(step.path);
+
+    }
+
+    if (step.mstEdges) {
+
+        step.mstEdges.forEach((edge) => {
+
+            highlightEdge(
+                edge.from,
+                edge.to,
+                "path"
+            );
+
+        });
+
+    }
+
+    document.getElementById("current-step").textContent =
+        currentStep + 1;
+
+    currentStep++;
+
+}
+
+
+// -----------------------------
+// UPDATE MARKER COLOR
+// -----------------------------
+
+function updateCityMarker(city, state) {
+
+    const marker = cityMarkers[city];
+
+    if (!marker) return;
+
+    let color = "#3498db";
+
+    if (state === "visited") {
+        color = "#2ecc71";
+    }
+
+    if (state === "current") {
+        color = "#e74c3c";
+    }
+
+    if (state === "path") {
+        color = "#f39c12";
+    }
+
+    marker.setStyle({
+        fillColor: color,
+        color: "#ffffff",
+        radius: state === "current" ? 12 : 8
+    });
+
+}
+
+
+// -----------------------------
+// HIGHLIGHT EDGE
+// -----------------------------
+
+function highlightEdge(city1, city2, state) {
+
+    const key = getEdgeKey(city1, city2);
+    const line = edgeLines[key];
+
+    if (!line) return;
+
+    if (state === "active") {
+
+        line.setStyle({
+            color: "#e74c3c",
+            weight: 6,
+            opacity: 1
+        });
+
+    } else if (state === "path") {
+
+        line.setStyle({
+            color: "#f39c12",
+            weight: 7,
+            opacity: 1
+        });
+
+    }
+
+}
+
+
+// -----------------------------
+// HIGHLIGHT FINAL PATH
+// -----------------------------
+
+function highlightPath(path) {
+
+    if (!path || path.length === 0) return;
+
+    path.forEach((city) => {
+
+        updateCityMarker(city, "path");
+
+    });
+
+    for (let i = 0; i < path.length - 1; i++) {
+
+        highlightEdge(
+            path[i],
+            path[i + 1],
+            "path"
+        );
+
+    }
+
+}
+
+
+// -----------------------------
+// RESET MAP VISUALS
+// -----------------------------
+
+function resetGraphVisuals() {
+
+    Object.keys(cityMarkers).forEach((city) => {
+
+        cityMarkers[city].setStyle({
+            fillColor: "#3498db",
+            color: "#ffffff",
+            radius: 8
+        });
+
+    });
+
+    Object.values(edgeLines).forEach((line) => {
+
+        line.setStyle({
+            color: "#95a5a6",
+            weight: 3,
+            opacity: 0.7
+        });
+
+    });
+
+}
+
+
+// ============================================
+// RESET FUNCTIONS
+// ============================================
+
+function resetGraph() {
+
+    resetGraphVisuals();
+
+    animationSteps = [];
+    currentStep = 0;
+    isAnimating = false;
+
+    document.getElementById("visited-count").textContent = "0";
+    document.getElementById("current-step").textContent = "0";
+
+    document.getElementById("step-info").textContent =
+        "Click 'Run Algorithm' to start the visualization";
+
+}
+
+
+function resetVisualization() {
+
+    resetGraph();
+
+    const description =
+        document.getElementById("algorithm-description");
+
+    if (currentAlgorithm === "dfs") {
+
+        description.textContent =
+            "DFS explores all connected nodes from a starting point using a stack-based approach. Time Complexity: O(V + E)";
+
+    } else if (currentAlgorithm === "prims") {
+
+        description.textContent =
+            "Prim's algorithm finds a minimum spanning tree for a weighted undirected graph. Time Complexity: O(E log V)";
+
+    } else {
+
+        description.textContent =
+            "Dijkstra's algorithm finds the shortest path between nodes in a weighted graph. Time Complexity: O((V + E) log V)";
+
+    }
+
+}
+
+
+// ============================================
+// STEP CONTROLS
+// ============================================
+
+function stepAlgorithm() {
+
+    if (!isAnimating && animationSteps.length === 0) {
+
+        alert("Please run an algorithm first!");
+        return;
+
+    }
+
+    executeStep();
+
+}
+
+
+function stepBack() {
+
+    if (currentStep <= 1) return;
+
+    currentStep -= 2;
+
+    executeStep();
+
+}
+
+
+// ============================================
+// INITIALIZE WHEN PAGE LOADS
+// ============================================
+
+window.addEventListener("load", function () {
+
+    initializeMap();
+
+});
+
+
+// ============================================
+// KEYBOARD SHORTCUTS
+// ============================================
+
+document.addEventListener("keydown", function (event) {
+
+    if (event.key === "ArrowRight" || event.key === " ") {
+
+        event.preventDefault();
+        stepAlgorithm();
+
+    } else if (event.key === "ArrowLeft") {
+
+        event.preventDefault();
+        stepBack();
+
+    } else if (event.key === "Enter") {
+
+        event.preventDefault();
+        runAlgorithm();
+
+    } else if (event.key === "Escape") {
+
+        event.preventDefault();
+        resetVisualization();
+
+    }
+
+});
